@@ -1,14 +1,6 @@
-# 项目名，以RM_开头
-
-![Version](https://img.shields.io/badge/Version-1.0.1-brightgreen.svg)&nbsp;&nbsp;![Build](https://img.shields.io/badge/Build-Passed-success.svg)&nbsp;&nbsp;![License](https://img.shields.io/badge/License-AGPL-blue.svg)
-
-[English](./README.md)/中文
-
-***
-
 ### 简介
 
-&nbsp;&nbsp;&nbsp;&nbsp;本项目的开发目的是为了……………………。本项目基于…………芯片，实现了…………功能。…………芯片具有…………特性，是较为优秀的解决方案。下图为模块的成品图展示。
+&nbsp;&nbsp;&nbsp;&nbsp;本项目的开发目的是为了实现一种高效率、低功耗的音频功率放大方案，以满足音频系统中对体积小、发热低以及音质良好的需求。本项目基于STM32G431CBT6和IR2104芯片，实现了数字音频信号的PWM调制及全桥功率放大输出功能。STM32G431CBT6具有高性能Cortex-M4内核、丰富的定时器资源以及高精度ADC等特性，最大主频高达170MHz,能够实现高分辨率PWM输出与音频信号采样处理；IR2104 具备高低侧驱动能力、自举电路支持及较高的开关速度，适用于构建高效率的功率驱动级，是较为优秀的解决方案。下图为模块的成品图展示。
 
 ![image1](./docs/image1.jpg)
 
@@ -19,7 +11,7 @@
 + EDA工具：KiCAD 7.0.7 (VC++ 1936, 64bit)
 + 编译工具链：riscv-none-embed-gcc 8.2.0
 + 调试工具：OpenOCD 0.11.0+dev-gfad123a16- (2023-05-05-13:43)
-+ 集成开发工具：CLion 2023.1.3 #CL-231.9011.31
++ 集成开发工具：Visual Studio Code
 + 烧录工具： STM32CubeProgrammer v2.6.0
 
 ***
@@ -30,7 +22,7 @@
 
 + docs：README相关的图片及文档
 
-+ progam：程序源码（没有的话删掉这个文件夹）
++ progam：程序源码
 
 **注意：生产制造相关的Gerber、BOM、POS文件及程序固件均在仓库的Release中发布**
 
@@ -52,7 +44,7 @@
 
 1. 所有USB总线需要设置成差分对，在布线时严格遵循差分信号布线规则。
 2. 所有CAN总线需要设置成差分对，在布线时严格遵循差分信号布线规则。
-3. 晶振和谐振电容底部最好挖空不铺铜。
+3. 晶振底部最好挖空不铺铜。
 4. 电源线线宽应尽量大于0.3mm以保证电源轨道不塌陷。
 
 ***

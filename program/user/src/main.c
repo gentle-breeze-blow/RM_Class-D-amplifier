@@ -1,250 +1,189 @@
-/*
-
-The MIT License (MIT)
-
-Copyright (c) 2016 Hubert Denkmair
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-*/
-
-#include <stdlib.h>
-#include "config.h"
-#include "hal_include.h"
-#include "usbd_def.h"
-#include "usbd_desc.h"
-#include "usbd_core.h"
-#include "usbd_gs_can.h"
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+#include "adc.h"
+#include "dma.h"
+#include "tim.h"
 #include "gpio.h"
-#include "queue.h"
-#include "gs_usb.h"
-#include "can.h"
-#include "led.h"
-#include "dfu.h"
-#include "timer.h"
-#include "flash.h"
-#include "util.h"
 
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+
+/* USER CODE END Includes */
+
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+
+/* USER CODE BEGIN PV */
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static bool send_to_host_or_enqueue(struct gs_host_frame *frame);
-static void send_to_host();
+/* USER CODE BEGIN PFP */
 
-can_data_t hCAN = {0};
-USBD_HandleTypeDef hUSB = {0};
-led_data_t hLED = {0};
+/* USER CODE END PFP */
 
-queue_t *q_frame_pool = NULL;
-queue_t *q_from_host = NULL;
-queue_t *q_to_host = NULL;
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
 
-uint32_t received_count = 0;
-uint32_t no_data_receive_counter = 0;
+/* USER CODE END 0 */
 
-int main(void) {
-    uint32_t last_can_error_status = 0;
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
 
-    HAL_Init();
-    SystemClock_Config();
-    flash_load();
-    gpio_init();
-    led_init(&hLED, LED1_GPIO_Port, LED1_Pin, LED1_Active_High, LED2_GPIO_Port, LED2_Pin, LED2_Active_High);
+  /* USER CODE BEGIN 1 */
 
-    /* nice wake-up pattern */
-    for (uint8_t i = 0; i < 10; i++) {
-        HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-        HAL_Delay(50);
-        HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
-    }
+  /* USER CODE END 1 */
 
-    led_set_mode(&hLED, led_mode_off);
-    timer_init();
+  /* MCU Configuration--------------------------------------------------------*/
 
-    can_init(&hCAN, CAN_INTERFACE);
-    can_disable(&hCAN);
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-    q_frame_pool = queue_create(CAN_QUEUE_SIZE);
-    q_from_host = queue_create(CAN_QUEUE_SIZE);
-    q_to_host = queue_create(CAN_QUEUE_SIZE);
-    assert_basic(q_frame_pool && q_from_host && q_to_host);
+  /* USER CODE BEGIN Init */
 
-    struct gs_host_frame *msgbuf = calloc(CAN_QUEUE_SIZE, sizeof(struct gs_host_frame));
-    assert_basic(msgbuf);
+  /* USER CODE END Init */
 
-    for (unsigned i = 0; i < CAN_QUEUE_SIZE; i++) {
-        queue_push_back(q_frame_pool, &msgbuf[i]);
-    }
+  /* Configure the system clock */
+  SystemClock_Config();
 
-    USBD_Init(&hUSB, (USBD_DescriptorsTypeDef *) &FS_Desc, DEVICE_FS);
-    USBD_RegisterClass(&hUSB, &USBD_GS_CAN);
-    USBD_GS_CAN_Init(&hUSB, q_frame_pool, q_from_host, &hLED);
-    USBD_GS_CAN_SetChannel(&hUSB, 0, &hCAN);
-    USBD_Start(&hUSB);
+  /* USER CODE BEGIN SysInit */
 
-    while (1) {
-        struct gs_host_frame *frame = queue_pop_front(q_from_host);
-        if (frame != 0) { // send can message from host
-            if (can_send(&hCAN, frame)) {
-                // Echo sent frame back to host
-                frame->flags = 0x0;
-                frame->reserved = 0x0;
-                frame->timestamp_us = timer_get();
-                send_to_host_or_enqueue(frame);
+  /* USER CODE END SysInit */
 
-                led_indicate_trx(&hLED, led_2);
-            } else {
-                queue_push_front(q_from_host, frame); // retry later
-            }
-        }
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_ADC1_Init();
+  MX_TIM1_Init();
+  MX_TIM3_Init();
+  /* USER CODE BEGIN 2 */
 
-        if (USBD_GS_CAN_TxReady(&hUSB)) {
-            send_to_host();
-        }
+  /* USER CODE END 2 */
 
-        if (can_is_rx_pending(&hCAN)) {
-            struct gs_host_frame *tx_frame = queue_pop_front(q_frame_pool);
-            if (tx_frame != 0) {
-                if (can_receive(&hCAN, tx_frame)) {
-                    received_count++;
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
 
-                    tx_frame->timestamp_us = timer_get();
-                    tx_frame->echo_id = 0xFFFFFFFF; // not a echo frame
-                    tx_frame->channel = 0;
-                    tx_frame->flags = 0;
-                    tx_frame->reserved = 0;
-
-                    send_to_host_or_enqueue(tx_frame);
-                    led_indicate_trx(&hLED, led_1);
-                    no_data_receive_counter = 0;
-                } else
-                    queue_push_back(q_frame_pool, tx_frame);
-            }
-            // If there are frames to receive, don't report any error frames. The
-            // best we can localize the errors to is "after the last successfully
-            // received frame", so wait until we get there. LEC will hold some error
-            // to report even if multiple pass by.
-        } else {
-            uint32_t can_err = can_get_error_status(&hCAN);
-            struct gs_host_frame *err_frame = queue_pop_front(q_frame_pool);
-            if (err_frame != 0) {
-                err_frame->timestamp_us = timer_get();
-                if (can_parse_error_status(can_err, last_can_error_status, &hCAN, err_frame)) {
-                    send_to_host_or_enqueue(err_frame);
-                    last_can_error_status = can_err;
-                } else
-                    queue_push_back(q_frame_pool, err_frame);
-            }
-        }
-
-        led_update(&hLED);
-
-        if (USBD_GS_CAN_DfuDetachRequested(&hUSB)) {
-            dfu_run_bootloader();
-        }
-
-        if (no_data_receive_counter > 5000) {
-            SET_BIT(CAN_INTERFACE->MCR, CAN_MCR_INRQ);
-            uint32_t tickstart = HAL_GetTick();
-            while ((CAN_INTERFACE->MSR & CAN_MSR_INAK) == 0U) {
-                if ((HAL_GetTick() - tickstart) > 100)
-                    break;
-            }
-            CLEAR_BIT(CAN_INTERFACE->MCR, CAN_MCR_SLEEP);
-            SET_BIT(CAN_INTERFACE->MCR, CAN_MCR_RESET);
-
-            CAN_HandleTypeDef hcan1;
-            hcan1.Instance = CAN;
-            hcan1.Init.Prescaler = 4;
-            hcan1.Init.Mode = CAN_MODE_NORMAL;
-            hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-            hcan1.Init.TimeSeg1 = CAN_BS1_6TQ;
-            hcan1.Init.TimeSeg2 = CAN_BS2_5TQ;
-            hcan1.Init.TimeTriggeredMode = DISABLE;
-            hcan1.Init.AutoBusOff = ENABLE;
-            hcan1.Init.AutoWakeUp = ENABLE;
-            hcan1.Init.AutoRetransmission = DISABLE;
-            hcan1.Init.ReceiveFifoLocked = DISABLE;
-            hcan1.Init.TransmitFifoPriority = DISABLE;
-            HAL_CAN_Init(&hcan1);
-            HAL_CAN_Start(&hcan1);
-        }
-
-    }
+    /* USER CODE BEGIN 3 */
+  }
+  /* USER CODE END 3 */
 }
 
-void HAL_MspInit(void) {
-    __HAL_RCC_SYSCFG_CLK_ENABLE();
-    __HAL_RCC_PWR_CLK_ENABLE();
-    HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /** Configure the main internal regulator output voltage
+  */
+  HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
+
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
+  RCC_OscInitStruct.PLL.PLLN = 85;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
+  RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
-void SystemClock_Config(void) {
-    RCC_OscInitTypeDef RCC_OscInitStruct;
-    RCC_ClkInitTypeDef RCC_ClkInitStruct;
+/* USER CODE BEGIN 4 */
 
-    RCC_PeriphCLKInitTypeDef PeriphClkInit;
-    RCC_CRSInitTypeDef RCC_CRSInitStruct;
+/* USER CODE END 4 */
 
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48;
-    RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
-    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-    HAL_RCC_OscConfig(&RCC_OscInitStruct);
-
-    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
-    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI48;
-    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-    HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1);
-
-    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
-    PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
-    HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
-
-    __HAL_RCC_CRS_CLK_ENABLE();
-    RCC_CRSInitStruct.Prescaler = RCC_CRS_SYNC_DIV1;
-    RCC_CRSInitStruct.Source = RCC_CRS_SYNC_SOURCE_USB;
-    RCC_CRSInitStruct.Polarity = RCC_CRS_SYNC_POLARITY_RISING;
-    RCC_CRSInitStruct.ReloadValue = __HAL_RCC_CRS_RELOADVALUE_CALCULATE(48000000, 1000);
-    RCC_CRSInitStruct.ErrorLimitValue = 34;
-    RCC_CRSInitStruct.HSI48CalibrationValue = 32;
-    HAL_RCCEx_CRSConfig(&RCC_CRSInitStruct);
-
-    HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq() / 1000);
-    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
-
-    /* SysTick_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1)
+  {
+  }
+  /* USER CODE END Error_Handler_Debug */
 }
-
-bool send_to_host_or_enqueue(struct gs_host_frame *frame) {
-    queue_push_back(q_to_host, frame);
-    return true;
+#ifdef USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* USER CODE END 6 */
 }
-
-void send_to_host() {
-    struct gs_host_frame *frame = queue_pop_front(q_to_host);
-
-    if (!frame)
-        return;
-
-    if (USBD_GS_CAN_SendFrame(&hUSB, frame) == USBD_OK)
-        queue_push_back(q_frame_pool, frame);
-    else
-        queue_push_front(q_to_host, frame);
-}
-
+#endif /* USE_FULL_ASSERT */
