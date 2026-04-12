@@ -31,13 +31,13 @@
 
 #### 原理图设计要点
 
-&nbsp;&nbsp;&nbsp;&nbsp;USB HUB电路设计：由于整车需要至少2路CAN总线来保证电机回传数据包的完整性，所以我们采用了GL850G作为USB HUB芯片实现USB一拖四的方案。另外，我们还通过使用施密特触发器来实现上电时序，保证USB设备枚举的顺序在每次上电后都是一致的。
+&nbsp;&nbsp;&nbsp;&nbsp;音频输入电路设计：由于输入音频信号为交流信号，为了简化电路设计，在不使用电荷泵产生负电压的情形下，我们可以将输入音频信号偏置到正电压。后续还需使用运放对输入音频的交流部分进行放大，这里只要放大交流部分，不能放大直流电压部分，否则容易超过STM32的GPIO可承受电压值。所以，在本工程里，运放的反馈电阻另一端接到虚拟地，也就是1.65V的偏置基准电压。
 
-![usb_hub](https://raw.githubusercontent.com/rm-controls/rm_usb2can/main/image/usb_hub.png)
+&nbsp;&nbsp;&nbsp;&nbsp;半桥电路设计：查阅数据手册，使用对应数据计算出自举电容和栅极电阻的值。自举电容应选择大封装0805或1206，后续调试阶段可根据实测波形来调节栅极电阻阻值。栅极电阻两端反向并联续流二极管，加快MOS管的关断。MOS管的G和S极之间建议用电阻进行钳位，以保护MOS管栅极。
 
-&nbsp;&nbsp;&nbsp;&nbsp;USB转CAN电路设计：用STM32F072CBT6实现USB转CAN功能。CAN电平转换芯片采用MAX3051EKA芯片，该芯片使用3.3V供电，且封装为SOT23-8 (Small Outline Transistor)，为PCB小型化提供了基础。图中的R6、R7电阻用途为更改STM32的Boot模式，从而使STM32能够通过更改R6、R7的短接模式而在DFU (Device Firmware Upgrade) 烧录模式与Flash模式下切换，方便烧录固件。
+![原理图](https://github.com/gentle-breeze-blow/RM_Class-D-amplifier/blob/master/docs/image1.png)
 
-![stm32_can](https://raw.githubusercontent.com/rm-controls/rm_usb2can/main/image/stm32_can.png)
+
 
 #### PCB布局布线要点
 
@@ -46,7 +46,6 @@
 3. 晶振底部最好挖空不铺铜,周围做包地处理。
 4. 电源线线宽应尽量大于0.3mm，建议采用铺铜的方式。
 5. IR2104芯片输出电流达几百mA，走线也需适度加粗。
-
 
 
 **组织：DynamicX 
